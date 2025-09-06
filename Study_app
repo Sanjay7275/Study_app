@@ -1,0 +1,647 @@
+# Full Study App — Flutter (Complete Sample)
+
+**Summary (Hindi):**
+यह एक पूरा Flutter प्रोजेक्ट का sample है जिसमें शामिल हैं:
+- Authentication (Firebase)
+- Notes (PDF/Text) — Firebase Storage + Viewer
+- Video Lectures — YouTube links / Firebase Storage
+- Quiz (MCQ) + Result calculation
+- Teacher Panel (Notes/Video/Quiz upload)
+- AI Teacher (OpenAI ChatGPT integration)
+
+---
+
+## Project structure (lib/)
+```
+lib/
+├─ main.dart
+├─ firebase_options.dart    // from FlutterFire CLI (placeholder)
+├─ auth/
+│  ├─ login.dart
+│  └─ signup.dart
+├─ home.dart
+├─ notes/
+│  └─ notes_screen.dart
+├─ videos/
+│  └─ video_screen.dart
+├─ quiz/
+│  ├─ quiz_screen.dart
+│  └─ result_screen.dart
+├─ teacher/
+│  └─ teacher_panel.dart
+└─ ai_teacher/
+   └─ ai_screen.dart
+```
+
+---
+
+## Important files included below
+
+> **Note:** यह एक sample scaffold है — आपको Firebase config (`google-services.json` / `GoogleService-Info.plist`), और OpenAI API key अपनी तरफ़ से डालनी होगी।
+
+---
+
+### pubspec.yaml (essential deps)
+```yaml
+name: study_app
+description: Full study app sample
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.19.0 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+
+  firebase_core: ^3.0.0
+  firebase_auth: ^5.0.0
+  cloud_firestore: ^5.0.0
+  firebase_storage: ^12.0.0
+
+  http: ^1.2.0
+  video_player: ^2.8.0
+  pdfx: ^2.6.0
+  provider: ^6.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+```
+
+---
+
+### main.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'auth/login.dart';
+import 'home.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const StudyApp());
+}
+
+class StudyApp extends StatelessWidget {
+  const StudyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Study App',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const LoginPage(),
+    );
+  }
+}
+```
+
+---
+
+### auth/login.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../home.dart';
+import 'signup.dart';
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _email = TextEditingController();
+  final _pass = TextEditingController();
+  bool loading = false;
+
+  Future<void> login() async {
+    setState(() => loading = true);
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _email.text.trim(),
+        password: _pass.text.trim(),
+      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: _pass, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            const SizedBox(height: 20),
+            ElevatedButton(onPressed: login, child: loading ? const CircularProgressIndicator() : const Text('Login')),
+            TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupPage())), child: const Text('Signup'))
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+### auth/signup.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class SignupPage extends StatefulWidget {
+  const SignupPage({super.key});
+
+  @override
+  State<SignupPage> createState() => _SignupPageState();
+}
+
+class _SignupPageState extends State<SignupPage> {
+  final _email = TextEditingController();
+  final _pass = TextEditingController();
+  final _name = TextEditingController();
+  bool loading = false;
+
+  Future<void> signup() async {
+    setState(() => loading = true);
+    try {
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _email.text.trim(),
+        password: _pass.text.trim(),
+      );
+      await cred.user!.updateDisplayName(_name.text.trim());
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Signup')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
+            TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: _pass, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            const SizedBox(height: 20),
+            ElevatedButton(onPressed: signup, child: loading ? const CircularProgressIndicator() : const Text('Create Account')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+### home.dart
+```dart
+import 'package:flutter/material.dart';
+import 'notes/notes_screen.dart';
+import 'videos/video_screen.dart';
+import 'quiz/quiz_screen.dart';
+import 'ai_teacher/ai_screen.dart';
+import 'teacher/teacher_panel.dart';
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Study App')),
+      body: GridView.count(
+        crossAxisCount: 2,
+        children: [
+          _menu(context, 'Notes', const NotesScreen()),
+          _menu(context, 'Videos', const VideoScreen()),
+          _menu(context, 'Quiz', const QuizScreen()),
+          _menu(context, 'AI Teacher', const AiScreen()),
+          _menu(context, 'Teacher Panel', const TeacherPanel()),
+        ],
+      ),
+    );
+  }
+
+  Widget _menu(BuildContext ctx, String title, Widget page) {
+    return GestureDetector(
+      onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => page)),
+      child: Card(
+        margin: const EdgeInsets.all(16),
+        child: Center(child: Text(title, style: const TextStyle(fontSize: 18))),
+      ),
+    );
+  }
+}
+```
+
+---
+
+### notes/notes_screen.dart (simple list + PDF viewer)
+```dart
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pdfx/pdfx.dart';
+
+class NotesScreen extends StatelessWidget {
+  const NotesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final notesCol = FirebaseFirestore.instance.collection('notes');
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Notes')),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: notesCol.snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final docs = snapshot.data!.docs;
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, i) {
+              final data = docs[i].data() as Map<String, dynamic>;
+              return ListTile(
+                title: Text(data['title'] ?? 'Untitled'),
+                subtitle: Text(data['description'] ?? ''),
+                onTap: () async {
+                  final url = data['pdfUrl'];
+                  if (url != null) {
+                    final doc = await PdfDocument.openData(Uri.parse(url).resolve('').readAsBytes());
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => PdfViewPage(document: doc)));
+                  }
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class PdfViewPage extends StatelessWidget {
+  final PdfDocument document;
+  const PdfViewPage({super.key, required this.document});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = PdfController(document: document);
+    return Scaffold(
+      appBar: AppBar(title: const Text('PDF')),
+      body: PdfView(controller: controller),
+    );
+  }
+}
+```
+
+> **Note:** Above code shows how to fetch note metadata from Firestore. For real apps, store signed URLs from Firebase Storage.
+
+---
+
+### videos/video_screen.dart (play video from URL / YouTube link)
+```dart
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:video_player/video_player.dart';
+
+class VideoScreen extends StatelessWidget {
+  const VideoScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final col = FirebaseFirestore.instance.collection('videos');
+    return Scaffold(
+      appBar: AppBar(title: const Text('Videos')),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: col.snapshots(),
+        builder: (context, snap) {
+          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+          final docs = snap.data!.docs;
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, i) {
+              final d = docs[i].data() as Map<String, dynamic>;
+              return ListTile(
+                title: Text(d['title'] ?? 'Video'),
+                subtitle: Text(d['description'] ?? ''),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayerPage(url: d['videoUrl']))),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class VideoPlayerPage extends StatefulWidget {
+  final String url;
+  const VideoPlayerPage({super.key, required this.url});
+
+  @override
+  State<VideoPlayerPage> createState() => _VideoPlayerPageState();
+}
+
+class _VideoPlayerPageState extends State<VideoPlayerPage> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(widget.url)..initialize().then((_) { setState(() {}); _controller.play(); });
+  }
+
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Video')),
+      body: Center(
+        child: _controller.value.isInitialized ? AspectRatio(aspectRatio: _controller.value.aspectRatio, child: VideoPlayer(_controller)) : const CircularProgressIndicator(),
+      ),
+    );
+  }
+}
+```
+
+---
+
+### quiz/quiz_screen.dart + result_screen.dart
+```dart
+// quiz_screen.dart
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'result_screen.dart';
+
+class QuizScreen extends StatefulWidget {
+  const QuizScreen({super.key});
+
+  @override
+  State<QuizScreen> createState() => _QuizScreenState();
+}
+
+class _QuizScreenState extends State<QuizScreen> {
+  final col = FirebaseFirestore.instance.collection('quizzes').doc('sampleQuiz').collection('questions');
+  Map<int, dynamic> answers = {};
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Quiz')),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: col.snapshots(),
+        builder: (context, snap) {
+          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+          final docs = snap.data!.docs;
+          return ListView.builder(
+            itemCount: docs.length + 1,
+            itemBuilder: (context, i) {
+              if (i == docs.length) {
+                return ElevatedButton(onPressed: () {
+                  int correct = 0;
+                  for (var j = 0; j < docs.length; j++) {
+                    final data = docs[j].data() as Map<String, dynamic>;
+                    if (answers[j] == data['correct']) correct++;
+                  }
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => ResultScreen(score: correct, total: docs.length)));
+                }, child: const Text('Submit'));
+              }
+              final data = docs[i].data() as Map<String, dynamic>;
+              final opts = List<String>.from(data['options']);
+              return Card(
+                margin: const EdgeInsets.all(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Q${i+1}: ${data['question']}'),
+                      const SizedBox(height: 8),
+                      ...List.generate(opts.length, (k) => RadioListTile(value: opts[k], groupValue: answers[i], title: Text(opts[k]), onChanged: (v) => setState(() => answers[i] = v))),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// result_screen.dart
+import 'package:flutter/material.dart';
+
+class ResultScreen extends StatelessWidget {
+  final int score;
+  final int total;
+  const ResultScreen({super.key, required this.score, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Result')),
+      body: Center(child: Text('You got $score / $total', style: const TextStyle(fontSize: 24))),
+    );
+  }
+}
+```
+
+---
+
+### teacher/teacher_panel.dart (upload notes/videos/quizes)
+```dart
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
+class TeacherPanel extends StatefulWidget {
+  const TeacherPanel({super.key});
+
+  @override
+  State<TeacherPanel> createState() => _TeacherPanelState();
+}
+
+class _TeacherPanelState extends State<TeacherPanel> {
+  final _title = TextEditingController();
+  final _desc = TextEditingController();
+
+  Future<void> uploadNote() async {
+    // For simplicity: teacher should upload file via Firebase Console or implement file picker
+    final title = _title.text.trim();
+    final desc = _desc.text.trim();
+    await FirebaseFirestore.instance.collection('notes').add({
+      'title': title,
+      'description': desc,
+      'pdfUrl': 'https://example.com/sample.pdf' // replace with real uploaded URL
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note metadata saved')));
+  }
+
+  Future<void> createQuiz() async {
+    final qcol = FirebaseFirestore.instance.collection('quizzes').doc('sampleQuiz').collection('questions');
+    // Example question
+    await qcol.add({
+      'question': 'What is 2+2?',
+      'options': ['3', '4', '5'],
+      'correct': '4'
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quiz question added')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Teacher Panel')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(controller: _title, decoration: const InputDecoration(labelText: 'Title')),
+            TextField(controller: _desc, decoration: const InputDecoration(labelText: 'Description')),
+            const SizedBox(height: 10),
+            ElevatedButton(onPressed: uploadNote, child: const Text('Save Note (metadata)')),
+            const SizedBox(height: 10),
+            ElevatedButton(onPressed: createQuiz, child: const Text('Add Sample Quiz Question')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+### ai_teacher/ai_screen.dart (OpenAI chat integration)
+```dart
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class AiScreen extends StatefulWidget {
+  const AiScreen({super.key});
+
+  @override
+  State<AiScreen> createState() => _AiScreenState();
+}
+
+class _AiScreenState extends State<AiScreen> {
+  final _ctrl = TextEditingController();
+  String responseText = '';
+  bool loading = false;
+
+  Future<void> ask(String q) async {
+    setState(() => loading = true);
+    const apiKey = 'YOUR_OPENAI_API_KEY'; // replace
+    final url = Uri.parse('https://api.openai.com/v1/chat/completions');
+    final res = await http.post(url,
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $apiKey'},
+        body: json.encode({
+          'model': 'gpt-4o',
+          'messages': [
+            {'role': 'system', 'content': 'You are a helpful study assistant.'},
+            {'role': 'user', 'content': q}
+          ],
+          'max_tokens': 800
+        }));
+
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      setState(() { responseText = data['choices'][0]['message']['content'] ?? ''; });
+    } else {
+      setState(() { responseText = 'Error: ${res.body}'; });
+    }
+    setState(() => loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('AI Teacher')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(controller: _ctrl, decoration: const InputDecoration(labelText: 'Ask a doubt')),
+            const SizedBox(height: 8),
+            ElevatedButton(onPressed: () => ask(_ctrl.text.trim()), child: loading ? const CircularProgressIndicator() : const Text('Ask AI')),
+            const SizedBox(height: 12),
+            Expanded(child: SingleChildScrollView(child: Text(responseText)))
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## Firebase data model suggestion
+- **notes (collection)**: { title, description, pdfUrl }
+- **videos (collection)**: { title, description, videoUrl }
+- **quizzes (collection)**: doc per quiz -> subcollection **questions**: { question, options:[], correct }
+- **results (collection)**: { userId, quizId, score, timestamp }
+
+---
+
+## Run steps (quick)
+1. Install Flutter + Android Studio
+2. `flutter pub get`
+3. Configure Firebase: use `flutterfire configure` or add `google-services.json` / `GoogleService-Info.plist`
+4. Replace `firebase_options.dart` generated by FlutterFire CLI
+5. Put your OpenAI API key in `ai_teacher/ai_screen.dart` or preferably store on your server and call via secure endpoint
+6. `flutter run` (or `flutter build apk`)
+
+---
+
+## Security & Production notes
+- **Do not** hardcode API keys in client app for production. Use a backend proxy for OpenAI.
+- Use Firebase security rules to protect storage and db.
+- Use authenticated uploads (teacher role) — you can add a `role` field in users collection and check before allowing uploads.
+
+---
+
+## Want next? (choose)
+1. मैं यह पूरा प्रोजेक्ट GitHub repo में बनाकर zip दे दूँ? (मैं code scaffoldพร้อม कर सकता हूँ)
+2. मैं APK बना कर डाउनलोड लिंक के लिए instructions दूँ?
+3. आप चाहें तो मैं `teacher_panel` में फाइल अपलोड (file picker) और firebase upload code भी जोड़ दूँ।
+
+
+**Tip:** अगर आप चाहते हैं मैं अभी `notes + quiz + ai` का working minimal build कर दूँ (तुरंत रन करने लायक) तो बताइए — मैं वही तयार करकर दूँगा।
+
+---
+
+*End of document.*
+
+
+
+
