@@ -661,3 +661,30 @@ git remote add origin
 https://github.com/Sanjay7275/Study_app.git
 
 git push u origin main
+# प्रोजेक्ट फोल्डर में जाओ cd study_app
+
+# Git init करो
+
+git init
+
+# सभी फाइलें जोड़ो
+
+git add
+
+# पहली commit
+
+git commit -m "Initial Commit -Full Study App"
+
+# main branch बनाओ
+
+git branch -M main
+
+# GitHub repo link जोड़ो
+
+git remote add origin
+
+https://github.com/Sanjay7275/Study_app.git
+
+# अब push करो
+
+git push u origin main
