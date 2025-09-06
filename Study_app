@@ -644,4 +644,20 @@ class _AiScreenState extends State<AiScreen> {
 
 
 
+cd study_app
 
+git init
+
+git add
+
+git commit -m "Initial full study app
+
+scaffold"
+
+git branch -M main
+
+git remote add origin
+
+https://github.com/Sanjay7275/Study_app.git
+
+git push u origin main
